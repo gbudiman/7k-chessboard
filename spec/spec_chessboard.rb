@@ -31,8 +31,8 @@ RSpec.describe Chessboard do
     end
 
     it "should run correctly" do
-      c = Concurrent.new do_profiling: true
-      c.run_by_threads
+      c = Concurrent.new repeat: 1000000
+      c.run_by_threads 
     end
   end
 end

@@ -22,6 +22,7 @@ class Concurrent
 
     RubyProf.start if @do_profiling
 
+    t1 = Time.new
     creator = Thread.new do
       loop do
         if @queue.length > @concurrency_limit
@@ -66,7 +67,7 @@ class Concurrent
       loop do
         sleep 0.5
         processed = (@concurrents_completed - latched_count) * 2
-        printf "%10d / %10d [ %6d ] [ %6d threads/s]\n", 
+        printf "%10d / %10d [ %6d ] [ %6d instances/s]\n", 
                @concurrents_spawned, 
                @concurrents_completed, 
                @queue.length, 
@@ -80,8 +81,13 @@ class Concurrent
     creator.join
     executor.join
     monitor.join
+    t2 = Time.new
 
+    delta_time_s = sprintf("%4.2f", t2 - t1)
+    speed_s = sprintf("%8.2f", @repeat / (t2 - t1))
     puts "Creator, Executor, and Monitor threads joined. Run completed"
+    puts "Time elapsed:      #{delta_time_s} s"
+    puts "Average speed: #{speed_s} instances/s"
 
     if @do_profiling
       result = RubyProf.stop 
@@ -89,8 +95,8 @@ class Concurrent
       printer.print
     end
 
-    ap @statistics
-    ap Hash[@acquisitions.sort{|a,b| b[1] <=> a[1]}]
+    #ap @statistics
+    #ap Hash[@acquisitions.sort{|a,b| b[1] <=> a[1]}]
   end
 
 private
