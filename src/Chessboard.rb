@@ -11,13 +11,12 @@ class Chessboard
 
   attr_reader :board, :statistics, :acquisitions
   
-  def initialize _srand = Random.new
-    @board = Hash.new
+  def initialize _srand = Random.new, **h
+    @board = h[:board] || initialize_board
     @srand = _srand
     @statistics = { feature: 0, skfl: 0, rfs: 0 }
     @acquisitions = Hash.new 0
 
-    initialize_board
     return self
   end
 
@@ -62,7 +61,9 @@ class Chessboard
 
 private
   def initialize_board
-    (0..CHESSBOARD_SIZE).each { |i| @board[i] = nil }
+    s = Hash.new
+    (0..CHESSBOARD_SIZE).each { |i| s[i] = nil }
+    return s
   end
 
   def _plot _pool, **h

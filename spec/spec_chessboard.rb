@@ -1,5 +1,5 @@
 require "#{File.dirname(__FILE__)}/../src/chessboard"
-require 'ruby-prof'
+require "#{File.dirname(__FILE__)}/../src/concurrent"
 
 RSpec.describe Chessboard do
   before :each do
@@ -31,77 +31,8 @@ RSpec.describe Chessboard do
     end
 
     it "should run correctly" do
-      repeat = 1000000
-      thread_concurrency_limit = 512
-      queue = Array.new
-      statistics = { feature: 0, skfl: 0, rfs: 0 }
-      threads_spawned = 0
-      threads_completed = 0
-      acquisitions = Hash.new 0
-
-      puts "Begin multithreading test with #{repeat} instances..."
-
-      RubyProf.start
-
-      creator = Thread.new do
-        loop do
-          if queue.length > thread_concurrency_limit
-            sleep 0.1 
-            next
-          end
-
-          (thread_concurrency_limit / 2).times do
-            queue.push Chessboard.new
-            threads_spawned += 1
-          end
-
-          break if threads_spawned >= repeat
-        end
-      end
-
-      executor = Thread.new do
-        loop do
-          if queue.length == 0
-            sleep 0.1 
-            puts "Executor Thread sleeping..."
-            next
-          end
-
-          s = queue.pop.plot
-          statistics.each do |k, _junk|
-            statistics[k] = statistics[k] + 1 if s.statistics[k] > 0
-          end
-          s.acquisitions.each do |data, count|
-            acquisitions[data] += count
-          end
-          threads_completed += 1
-
-          break if threads_completed == repeat
-        end
-      end
-
-      monitor = Thread.new do
-        latched_count = 0
-        loop do
-          sleep 0.5
-          processed = (threads_completed - latched_count) * 2
-          printf "%10d / %10d [ %6d ] [ %6d threads/s]\n", threads_spawned, threads_completed, queue.length, processed
-          latched_count = threads_completed
-          break if threads_spawned >= repeat and threads_completed >= repeat
-        end
-      end
-
-      creator.join
-      executor.join
-      monitor.join
-
-      result = RubyProf.stop
-      puts "Creator, Executor, and Monitor threads joined. Run completed"
-      ap statistics
-      ap Hash[acquisitions.sort{|a,b| b[1] <=> a[1]}]
-
-      printer = RubyProf::GraphPrinter.new(result)
-      printer.print
+      c = Concurrent.new do_profiling: true
+      c.run_by_threads
     end
   end
 end
