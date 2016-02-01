@@ -81,9 +81,12 @@ RSpec.describe Chessboard do
       end
 
       monitor = Thread.new do
+        latched_count = 0
         loop do
           sleep 0.5
-          printf "%10d / %10d [ %6d ]\n", threads_spawned, threads_completed, queue.length
+          processed = (threads_completed - latched_count) * 2
+          printf "%10d / %10d [ %6d ] [ %6d threads/s]\n", threads_spawned, threads_completed, queue.length, processed
+          latched_count = threads_completed
           break if threads_spawned >= repeat and threads_completed >= repeat
         end
       end
@@ -95,7 +98,7 @@ RSpec.describe Chessboard do
       result = RubyProf.stop
       puts "Creator, Executor, and Monitor threads joined. Run completed"
       ap statistics
-      ap acquisitions.sort_by{|k, v| v}
+      ap Hash[acquisitions.sort{|a,b| b[1] <=> a[1]}]
 
       printer = RubyProf::GraphPrinter.new(result)
       printer.print
