@@ -1,4 +1,5 @@
 require "#{File.dirname(__FILE__)}/../src/chessboard"
+require 'ruby-prof'
 
 RSpec.describe Chessboard do
   before :each do
@@ -25,57 +26,79 @@ RSpec.describe Chessboard do
   end
 
   context "multithreading" do
-    Thread.abort_on_exception = true
-    repeat = 40000
-    res = Array.new
-    statistics = { feature: 0, skfl: 0, rfs: 0 }
-    thread_spawn_completed = false
-    thread_spawned_tracker = Hash.new
-    thread_completed_tracker = Hash.new
+    before :each do
+      Thread.abort_on_exception = true
+    end
 
-    creator = Thread.new do
-      repeat.times do |r|
-        res[r] = Thread.new do
-          thread_spawned_tracker[r] = Chessboard.new
+    it "should run correctly" do
+      repeat = 1000000
+      thread_concurrency_limit = 512
+      queue = Array.new
+      statistics = { feature: 0, skfl: 0, rfs: 0 }
+      threads_spawned = 0
+      threads_completed = 0
+      acquisitions = Hash.new 0
+
+      puts "Begin multithreading test with #{repeat} instances..."
+
+      RubyProf.start
+
+      creator = Thread.new do
+        loop do
+          if queue.length > thread_concurrency_limit
+            sleep 0.1 
+            next
+          end
+
+          (thread_concurrency_limit / 2).times do
+            queue.push Chessboard.new
+            threads_spawned += 1
+          end
+
+          break if threads_spawned >= repeat
         end
       end
 
-      thread_spawn_completed = true
-      puts "Creator thread completed"
-    end
+      executor = Thread.new do
+        loop do
+          if queue.length == 0
+            sleep 0.1 
+            puts "Executor Thread sleeping..."
+            next
+          end
 
-    executor = Thread.new do
-      loop do
-        sleep 1 unless thread_spawn_completed
-
-        thread_spawned_tracker.keys.each do |thread_id|
-          s = thread_spawned_tracker[thread_id].plot
+          s = queue.pop.plot
           statistics.each do |k, _junk|
             statistics[k] = statistics[k] + 1 if s.statistics[k] > 0
           end
-          thread_completed_tracker[thread_id] = true
-          thread_spawned_tracker.delete thread_id
-        end
+          s.acquisitions.each do |data, count|
+            acquisitions[data] += count
+          end
+          threads_completed += 1
 
-        if thread_completed_tracker.length == repeat
-          puts "Executor thread completed"
-          break
+          break if threads_completed == repeat
         end
       end
-    end
 
-    monitor = Thread.new do
-      loop do
-        sleep 1
-        puts "Spawned/Completed: #{thread_spawned_tracker.length} / #{thread_completed_tracker.length}"
-        break if thread_completed_tracker.length == repeat
+      monitor = Thread.new do
+        loop do
+          sleep 0.5
+          printf "%10d / %10d [ %6d ]\n", threads_spawned, threads_completed, queue.length
+          break if threads_spawned >= repeat and threads_completed >= repeat
+        end
       end
-    end
 
-    creator.join
-    executor.join
-    monitor.join
-    puts "Creator, Executor, and Monitor threads joined. Run completed"
-    ap statistics
+      creator.join
+      executor.join
+      monitor.join
+
+      result = RubyProf.stop
+      puts "Creator, Executor, and Monitor threads joined. Run completed"
+      ap statistics
+      ap acquisitions.sort_by{|k, v| v}
+
+      printer = RubyProf::GraphPrinter.new(result)
+      printer.print
+    end
   end
 end

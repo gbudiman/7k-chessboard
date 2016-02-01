@@ -1,4 +1,6 @@
 class RNGesus
+  MAX_THRESHOLD = 2 ** 64
+
   def self.plot _chessboard, _pool, _rand, **h
     # valid options:
     # limit: integer
@@ -11,9 +13,9 @@ class RNGesus
 
     if h[:probability]
       counter = 0
-      threshold = 2**64 * h[:probability]
+      threshold = MAX_THRESHOLD * h[:probability]
       _chessboard.select{ |k, v| v == nil }.keys.each do |ci|
-        rand = _rand.rand(2**64)
+        rand = _rand.rand MAX_THRESHOLD
         if rand < threshold
           _chessboard[ci] = pick_one_from(_pool, _rand)
           counter += 1

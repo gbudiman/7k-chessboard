@@ -9,12 +9,13 @@ class Chessboard
   REGULAR_FOUR_STARS = (0..32).map{|i| "r4s#{i}"}.collect.to_a
   REGULAR_THREE_STARS = (0..100).map{|i| "r3s#{i}"}.collect.to_a
 
-  attr_reader :board, :statistics
+  attr_reader :board, :statistics, :acquisitions
   
   def initialize _srand = Random.new
     @board = Hash.new
     @srand = _srand
     @statistics = { feature: 0, skfl: 0, rfs: 0 }
+    @acquisitions = Hash.new 0
 
     initialize_board
     return self
@@ -36,8 +37,15 @@ class Chessboard
     _plot REGULAR_THREE_STARS, fill_remainder: true
 
     #validate!
+    summarize_acquisitions
 
     return self
+  end
+
+  def summarize_acquisitions
+    @board.each do |i, d|
+      @acquisitions[d] += 1
+    end
   end
 
   def _debug_fill_all
